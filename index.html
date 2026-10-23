@@ -281,8 +281,11 @@ async function syncSeed(manual){
       if(i<0){S.jobs.push(Object.assign({},sj));add++}
       else if((sj.updated||"")>(S.jobs[i].updated||"")&&!S.jobs[i].localEdit){S.jobs[i]=Object.assign({},S.jobs[i],sj);upd++}});
     (d.ammo||[]).forEach(sa=>{if(!S.ammo.some(a=>a.id===sa.id)){S.ammo.push(Object.assign({},sa));add++}});
+    let prof=false;
+    if(!S.profile.text.trim()){try{const pr=await fetch("data/profile.json?t="+Date.now(),{cache:"no-store"});if(pr.ok){const pj=await pr.json();if(pj.text){const r=parseResume(pj.text);
+      Object.assign(S.profile,{text:pj.text,name:r.name,edu:r.edu,exp:r.exp,skills:[...new Set([...S.profile.skills,...r.skills])]});if(pj.strengths&&!S.profile.strengths.length)S.profile.strengths=pj.strengths.slice();prof=true}}}catch(e){}}
     S.seedVersion=d.updated||"";save();
-    if(manual)toast(add||upd?`新增 ${add} 条，更新 ${upd} 条`:"已经是最新");
+    if(manual)toast(add||upd||prof?`新增 ${add} 条，更新 ${upd} 条${prof?"，简历已载入":""}`:"已经是最新");
     render();
   }catch(e){if(manual)toast("同步失败：网络不通或文件不存在")}
 }
