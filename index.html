@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>求职一条龙</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="求职一条龙">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f3eee2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#161a17" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;900&display=swap">
+<style>
+/* Layout: desktop = left sidebar + content; phone = sticky scrollable tab strip on top + content. Seven views in pipeline order. */
+:root{
+  --paper:#f3eee2; --surface:#fbf8f1; --ink:#1f2a24; --muted:#6c6b5f; --line:#dcd4c2;
+  --pine:#1f4d3a; --pine-ink:#f6f2e8; --pine-soft:#dde7df; --ochre:#a96a1c; --rust:#a3402e; --ok:#2f6f4c;
+  --serif:"Noto Serif SC","Songti SC","STSong",Georgia,serif;
+  --sans:-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --paper:#161a17; --surface:#1e231f; --ink:#e7e2d4; --muted:#9c9a8b; --line:#323a33;
+  --pine:#86bf9f; --pine-ink:#10160f; --pine-soft:#26352c; --ochre:#e0a14f; --rust:#e48270; --ok:#79c79a; color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font:15px/1.6 var(--sans);-webkit-text-size-adjust:100%;
+  padding-top:env(safe-area-inset-top,0px)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--pine);outline-offset:2px}
+.app{display:grid;grid-template-columns:220px minmax(0,1fr);min-height:100vh}
+.side{border-right:1px solid var(--line);padding:24px 14px;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:20px}
+.brand{display:flex;gap:10px;align-items:center;padding:0 8px}
+.brand .mk{width:36px;height:36px;border-radius:50%;background:var(--pine);color:var(--pine-ink);display:grid;place-items:center;font:900 17px var(--serif)}
+.brand b{font:900 17px var(--serif);display:block;line-height:1.2}
+.brand small{color:var(--muted);font-size:11px}
+nav.views{display:flex;flex-direction:column;gap:2px}
+nav.views button{all:unset;cursor:pointer;display:flex;gap:10px;align-items:baseline;padding:8px 10px;border-radius:8px;color:var(--muted)}
+nav.views button i{font:12px var(--mono);font-style:normal;opacity:.7}
+nav.views button[aria-current="page"]{background:var(--pine-soft);color:var(--ink);font-weight:600}
+nav.views button:focus-visible{outline:2px solid var(--pine)}
+.side .foot{margin-top:auto;font-size:12px;color:var(--muted);padding:0 8px}
+main{padding:32px clamp(16px,4vw,48px) 80px;min-width:0;max-width:1100px}
+.eyebrow{font:12px var(--mono);letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
+h1{font:900 30px/1.2 var(--serif);margin:4px 0 6px;text-wrap:balance}
+h2{font:600 18px/1.3 var(--serif);margin:0}
+h3{font:600 15px/1.3 var(--sans);margin:0}
+.lead{color:var(--muted);margin:0 0 22px;max-width:62ch}
+.stack{display:flex;flex-direction:column;gap:14px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.btn{border:1px solid var(--pine);background:var(--pine);color:var(--pine-ink);border-radius:9px;padding:8px 14px;font-weight:600;font-size:14px}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn.sm{padding:5px 10px;font-size:13px}
+.btn.danger{background:transparent;border-color:var(--line);color:var(--rust)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+input,select,textarea{width:100%;background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:9px 11px}
+textarea{resize:vertical;min-height:110px;line-height:1.55}
+label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--muted)}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:13px;background:var(--surface)}
+.chip.hit{border-color:var(--pine);background:var(--pine-soft);color:var(--ink);font-weight:600}
+.chip.miss{border-style:dashed;color:var(--muted)}
+.chip button{all:unset;cursor:pointer;color:var(--muted)}
+.muted{color:var(--muted)} .small{font-size:12px}
+.score{font:900 30px var(--serif);font-variant-numeric:tabular-nums;color:var(--pine)}
+.score.low{color:var(--ochre)}
+.bar{height:6px;background:var(--line);border-radius:9px;overflow:hidden}
+.bar span{display:block;height:100%;background:var(--pine)}
+.stat{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+.stat div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}
+.stat b{display:block;font:900 22px var(--serif);font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--muted)}
+.todo{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--line)}
+.todo:last-child{border-bottom:0}
+.todo .n{font:900 18px var(--serif);color:var(--pine);min-width:22px}
+.board{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(240px,1fr);gap:12px;overflow-x:auto;padding-bottom:10px;scroll-snap-type:x mandatory}
+.col{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px;scroll-snap-align:start;min-height:220px}
+.col.over{border-color:var(--pine);background:var(--pine-soft)}
+.col header{display:flex;justify-content:space-between;align-items:baseline;padding:2px 4px}
+.col header b{font:600 15px var(--serif)}
+.jc{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:6px;cursor:grab}
+.jc .co{font-weight:700}
+.jc .role{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.jc .note{font-size:12px;color:var(--muted);overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.jc .mv{display:flex;gap:6px}
+.jc .mv button{flex:1;border:1px solid var(--line);background:transparent;border-radius:7px;padding:4px;font-size:12px}
+.tag{font-size:11px;border:1px solid var(--line);border-radius:6px;padding:1px 6px;color:var(--muted);white-space:nowrap}
+.tag.t{border-color:var(--ok);color:var(--ok)} .tag.a{border-color:var(--pine);color:var(--pine)} .tag.o{border-color:var(--ochre);color:var(--ochre)}
+.due{font:12px var(--mono)} .due.hot{color:var(--rust)} .due.soon{color:var(--ochre)}
+.para{display:grid;grid-template-columns:minmax(0,1fr);gap:4px}
+.para .meta{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
+.para .meta b{color:var(--pine)}
+.para textarea{min-height:70px}
+.sug{border-left:3px solid var(--ochre);padding:6px 10px;font-size:13px;background:var(--surface);border-radius:0 8px 8px 0}
+.empty{border:1.5px dashed var(--line);border-radius:14px;padding:22px;color:var(--muted);text-align:center}
+.seg{display:flex;gap:4px;border:1px solid var(--line);border-radius:10px;padding:3px;width:fit-content;max-width:100%;overflow-x:auto}
+.seg button{all:unset;cursor:pointer;padding:5px 12px;border-radius:7px;font-size:13px;white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--pine);color:var(--pine-ink)}
+.q{display:flex;flex-direction:column;gap:6px;padding:12px 0;border-bottom:1px solid var(--line)}
+.q:last-child{border-bottom:0}
+.drill{position:fixed;inset:0;z-index:50;background:var(--paper);overflow-y:auto;
+  padding:calc(env(safe-area-inset-top,0px) + 18px) max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 24px) max(16px,env(safe-area-inset-left,0px))}
+.drill .in{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.bigq{font:900 22px/1.4 var(--serif);margin:0;text-wrap:balance}
+.timer{font:600 30px var(--mono);font-variant-numeric:tabular-nums}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:9px 16px;border-radius:10px;font-size:14px;z-index:60;max-width:calc(100% - 32px)}
+dialog{border:1px solid var(--line);border-radius:16px;background:var(--surface);color:var(--ink);padding:18px;width:min(520px,calc(100% - 32px))}
+dialog::backdrop{background:rgba(0,0,0,.35)}
+details summary{cursor:pointer;color:var(--muted);font-size:13px}
+@media (max-width:860px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .side{position:sticky;top:0;z-index:20;height:auto;border-right:0;border-bottom:1px solid var(--line);background:var(--paper);
+    padding:10px max(16px,env(safe-area-inset-right,0px)) 8px max(16px,env(safe-area-inset-left,0px));gap:8px}
+  .side .foot,.brand small{display:none}
+  .brand .mk{width:28px;height:28px;font-size:14px}
+  nav.views{flex-direction:row;overflow-x:auto;gap:4px;scrollbar-width:none}
+  nav.views::-webkit-scrollbar{display:none}
+  nav.views button{white-space:nowrap;padding:6px 10px}
+  main{padding:20px max(16px,env(safe-area-inset-right,0px)) 80px max(16px,env(safe-area-inset-left,0px))}
+  h1{font-size:25px}
+  .stat{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .board{grid-auto-columns:82%}
+}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><div class="mk">龙</div><div><b>求职一条龙</b><small>个人求职工作台</small></div></div>
+    <nav class="views" id="nav"></nav>
+    <div class="foot">数据存在这台设备的浏览器里。<br>记得在「概览」里定期导出备份。</div>
+  </aside>
+  <main id="main"></main>
+</div>
+<dialog id="dlg"></dialog>
+
+<script>
+(function(){
+"use strict";
+/* ================= state ================= */
+const KEY="qz.v1";
+const STAGES=["待投","已投","笔试","面试","Offer","结束"];
+const CATS=["AI教育","教师","机构"];
+const VIEWS=[["overview","概览"],["me","认识我"],["fit","岗位分析"],["jd","JD 拆解器"],["cv","简历定制"],["board","投递看板"],["practice","面试陪练"]];
+const blank=()=>({profile:{text:"",name:"",email:"",phone:"",edu:[],exp:[],skills:[],strengths:[]},jobs:[],jds:[],versions:[],practice:{},ammo:[],seedVersion:""});
+let S=load();
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY)||"null");if(s)return Object.assign(blank(),s)}catch(e){}return blank()}
+let saveT=null;
+function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast("保存失败：浏览器存储不可用")}},150)}
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+function toast(t){const el=document.createElement("div");el.className="toast";el.textContent=t;document.body.appendChild(el);setTimeout(()=>el.remove(),2200)}
+async function copy(t){try{await navigator.clipboard.writeText(t);toast("已复制")}catch(e){toast("复制失败，请长按手动复制")}}
+
+/* ================= knowledge base ================= */
+const SK={
+ "用户研究":["用户研究","user research","ux research","用研"],
+ "用户访谈":["访谈","interview"],
+ "问卷":["问卷","survey","questionnaire"],
+ "实验设计":["实验设计","experiment","实验","a/b","ab测试","ab test"],
+ "数据分析":["数据分析","data analysis","分析数据","数据驱动","数据敏感"],
+ "统计":["统计","statistic","回归","混合效应","mixed-effects","显著性"],
+ "R":["r语言"," r,","rstudio"],
+ "Python":["python"],
+ "SQL":["sql"],
+ "Excel":["excel"],
+ "Figma":["figma","axure","墨刀"],
+ "原型":["原型","prototype","交互稿"],
+ "需求分析":["需求分析","需求","requirement"],
+ "PRD":["prd","产品文档","需求文档"],
+ "竞品分析":["竞品","competitive"],
+ "产品设计":["产品设计","产品方案","功能设计","product design"],
+ "项目管理":["项目管理","推进","落地","project management","跨团队","协调"],
+ "沟通":["沟通","communication","表达","协作"],
+ "教学":["教学","授课","teaching","课堂","上课"],
+ "课程设计":["课程设计","课程研发","curriculum","lesson plan","教案","备课"],
+ "教研":["教研","教学研究","内容研发"],
+ "英语教学":["英语教学","english teaching","esl","efl","英语老师","英语教师"],
+ "CELTA":["celta"],
+ "TESOL":["tesol","tefl","tkt"],
+ "雅思托福":["雅思","托福","ielts","toefl"],
+ "二语习得":["二语习得","second language","sla","语言习得","language acquisition"],
+ "语言学":["语言学","linguistic","语音","speech"],
+ "学习科学":["学习科学","learning science","认知","cognitive","学习效果","learning outcome"],
+ "心理学":["心理学","psychology"],
+ "AI":["ai","人工智能","大模型","llm","gpt","aigc","agent","智能体"],
+ "Prompt":["prompt","提示词"],
+ "评测":["评测","evaluation","测评","标注","annotation"],
+ "内容运营":["内容运营","内容策划","content"],
+ "用户运营":["用户运营","社群","留存","活跃","召回","用户增长"],
+ "增长":["增长","growth","转化","拉新"],
+ "新媒体":["新媒体","小红书","短视频","公众号","抖音"],
+ "写作":["写作","writing","文案","撰写"],
+ "全英文授课":["全英文","全英","english medium","英文授课"],
+ "EAL/EAP":["eal","eap","ell","学术英语","语言支持"],
+ "国际课程":["ib","a-level","alevel","igcse","ap课程","dse","国际课程"],
+ "教师资格证":["教师资格证","教资","qts","pgce"],
+ "家长沟通":["家长"],
+ "双语":["双语","bilingual","中英"],
+ "海外背景":["海外","留学","overseas","英国","uk"]
+};
+const DIRS=[
+ {k:"教育产品经理",need:["需求分析","产品设计","PRD","竞品分析","原型","用户研究","数据分析","项目管理","学习科学","教学"],act:"做一份语言学习产品的案例分析（问题→用户→方案→指标），放进作品集"},
+ {k:"AI 产品 / 评测运营",need:["AI","Prompt","评测","数据分析","语言学","写作","沟通"],act:"挑一个 AI 学习产品，写 20 条评测用例和打分标准"},
+ {k:"用户研究",need:["用户研究","用户访谈","问卷","实验设计","统计","数据分析","心理学","学习科学"],act:"把论文改写成一段「研究问题→方法→样本→结论→建议」的用研项目"},
+ {k:"教研 / 课程研发",need:["教研","课程设计","教学","二语习得","英语教学","CELTA","写作","学习科学"],act:"整理 2 份你写过的教案，标出设计意图"},
+ {k:"国际学校英语 / EAL",need:["英语教学","CELTA","全英文授课","EAL/EAP","双语","国际课程","教师资格证"],act:"准备一节 15 分钟 demo lesson，从 CELTA 评分最好的那节改编"},
+ {k:"机构英语教师",need:["英语教学","雅思托福","教学","家长沟通","CELTA","沟通"],act:"把雅思成绩考到 8.0，简历写上各单项"},
+ {k:"内容 / 用户运营",need:["内容运营","用户运营","新媒体","增长","写作","数据分析"],act:"用一个小红书账号连发 5 篇英语学习笔记，记下数据"},
+ {k:"学习体验设计",need:["学习科学","课程设计","用户研究","原型","Figma","教学"],act:"画 3 张学习流程低保真图，说明每一步的学习原理"}
+];
+function norm(t){return " "+String(t||"").toLowerCase().replace(/\s+/g," ")+" "}
+function findSkills(text){const t=norm(text);return Object.keys(SK).filter(k=>SK[k].some(a=>t.includes(a.toLowerCase())))}
+function countSkill(text,k){const t=norm(text);return SK[k].reduce((n,a)=>{let i=0,c=0;const s=a.toLowerCase();while((i=t.indexOf(s,i))>-1){c++;i+=s.length}return n+c},0)}
+function mySkills(){const set=new Set(S.profile.skills);findSkills(S.profile.text+" "+S.profile.strengths.join(" ")).forEach(k=>set.add(k));return set}
+
+/* ================= router ================= */
+let view=(location.hash||"").slice(1);
+if(!VIEWS.some(v=>v[0]===view))view="overview";
+let viewArg=null;
+function go(v,arg){view=v;viewArg=arg||null;try{history.replaceState(null,"","#"+v)}catch(e){}render();window.scrollTo(0,0)}
+function renderNav(){const n=$("#nav");n.innerHTML=VIEWS.map((v,i)=>`<button data-v="${v[0]}" ${v[0]===view?'aria-current="page"':""}><i>0${i+1}</i>${v[1]}</button>`).join("");
+  n.querySelectorAll("button").forEach(b=>b.onclick=()=>go(b.dataset.v));
+  const cur=n.querySelector('[aria-current="page"]');if(cur&&cur.scrollIntoView)cur.scrollIntoView({block:"nearest",inline:"center"})}
+function render(){renderNav();const m=$("#main");m.innerHTML="";({overview:vOverview,me:vMe,fit:vFit,jd:vJd,cv:vCv,board:vBoard,practice:vPractice})[view](m)}
+function head(m,i,title,lead){m.insertAdjacentHTML("beforeend",`<div class="eyebrow">Module 0${i}</div><h1>${title}</h1><p class="lead">${lead}</p>`)}
+
+/* ================= 01 overview ================= */
+function daysLeft(d){if(!d)return null;return Math.round((new Date(d+"T00:00:00")-new Date(today()+"T00:00:00"))/864e5)}
+function vOverview(m){
+  head(m,1,"概览","现在进行到哪一步，下一步做什么。");
+  const st=STAGES.map(s=>`<div><b>${S.jobs.filter(j=>j.stage===s).length}</b><span>${s}</span></div>`).join("");
+  const steps=nextSteps();
+  m.insertAdjacentHTML("beforeend",`<div class="stack">
+   <div class="stat">${st}</div>
+   <div class="card"><h2>下一步</h2><div>${steps.map((s,i)=>`<div class="todo"><span class="n">${i+1}</span><div style="min-width:0;flex:1"><div>${s.t}</div>${s.d?`<div class="small muted">${s.d}</div>`:""}</div>${s.go?`<button class="btn sm ghost" data-go="${s.go}" ${s.arg?`data-arg="${esc(s.arg)}"`:""}>去做</button>`:""}</div>`).join("")}</div></div>
+   <div class="grid2">
+    <div class="card"><h2>同步与备份</h2>
+     <p class="small muted" style="margin:0">Claude 往仓库的 data/jobs.json 里加了岗位后，点「从仓库同步」就能并进来，你自己改过的不会被覆盖。</p>
+     <div class="row"><button class="btn" id="sync">从仓库同步</button><button class="btn ghost" id="exp">导出备份</button><button class="btn ghost" id="imp">导入备份</button></div>
+     <input type="file" id="impFile" accept="application/json,.json" hidden>
+    </div>
+    <div class="card"><h2>本周节奏</h2><p class="small muted" style="margin:0">每天最多 2 个投递。投完一个就在看板里点「已投 →」。</p>
+     <div class="row small"><span>今天已投：</span><b>${S.jobs.filter(j=>j.stage!=="待投"&&j.appliedOn===today()).length}</b></div></div>
+   </div></div>`);
+  m.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go,b.dataset.arg));
+  $("#sync").onclick=()=>syncSeed(true);
+  $("#exp").onclick=exportData;
+  $("#imp").onclick=()=>$("#impFile").click();
+  $("#impFile").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);S=Object.assign(blank(),d);save();toast("已导入");render()}catch(err){toast("文件不是有效的备份")}};r.readAsText(f)};
+}
+function nextSteps(){
+  const out=[];
+  if(!S.profile.text.trim())out.push({t:"先在「认识我」贴入简历全文",d:"后面的匹配度、简历定制都靠它。",go:"me"});
+  S.jobs.filter(j=>j.stage==="面试").forEach(j=>out.push({t:`准备面试：${j.co}`,d:j.role,go:"practice",arg:j.id}));
+  const todo=S.jobs.filter(j=>j.stage==="待投");
+  const dued=todo.filter(j=>j.due).sort((a,b)=>a.due<b.due?-1:1);
+  dued.slice(0,2).forEach(j=>{const d=daysLeft(j.due);out.push({t:`投 ${j.co}｜${j.role}`,d:d<0?`截止已过 ${-d} 天，先确认是否还开放`:`剩 ${d} 天`,go:"board"})});
+  const rest=todo.filter(j=>!j.due).sort((a,b)=>CATS.indexOf(a.cat)-CATS.indexOf(b.cat));
+  rest.slice(0,Math.max(0,3-dued.length)).forEach(j=>out.push({t:`投 ${j.co}｜${j.role}`,d:j.note||"",go:"board"}));
+  const untrained=S.ammo.filter(a=>a.rating===undefined).length;
+  if(untrained)out.push({t:`弹药库还有 ${untrained} 条没练过`,d:"每条 1 分钟，先说再看答案。",go:"practice"});
+  if(!out.length)out.push({t:"去「JD 拆解器」粘贴一个新岗位",go:"jd"});
+  return out.slice(0,5);
+}
+async function syncSeed(manual){
+  try{
+    const r=await fetch("data/jobs.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)throw 0;
+    const d=await r.json();let add=0,upd=0;
+    (d.jobs||[]).forEach(sj=>{const i=S.jobs.findIndex(j=>j.id===sj.id);
+      if(i<0){S.jobs.push(Object.assign({},sj));add++}
+      else if((sj.updated||"")>(S.jobs[i].updated||"")&&!S.jobs[i].localEdit){S.jobs[i]=Object.assign({},S.jobs[i],sj);upd++}});
+    (d.ammo||[]).forEach(sa=>{if(!S.ammo.some(a=>a.id===sa.id)){S.ammo.push(Object.assign({},sa));add++}});
+    S.seedVersion=d.updated||"";save();
+    if(manual)toast(add||upd?`新增 ${add} 条，更新 ${upd} 条`:"已经是最新");
+    render();
+  }catch(e){if(manual)toast("同步失败：网络不通或文件不存在")}
+}
+async function exportData(){
+  const txt=JSON.stringify(S,null,1);const name="job-hunting-backup-"+today()+".json";
+  try{const b=new Blob([txt],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();a.remove();toast("已导出 "+name)}
+  catch(e){copy(txt)}
+}
+
+/* ================= 02 me ================= */
+function parseResume(text){
+  const lines=text.split(/\n/).map(s=>s.trim()).filter(Boolean);
+  const email=(text.match(/[\w.+-]+@[\w-]+\.[\w.]+/)||[""])[0];
+  const phone=(text.match(/(\+?86[\s-]?)?1[3-9]\d[\s-]?\d{4}[\s-]?\d{4}/)||[""])[0];
+  const name=lines.find(l=>/^[一-龥]{2,4}$/.test(l)||/^[A-Z][a-z]+(\s[A-Z][a-z]+){1,2}$/.test(l))||"";
+  const eduRe=/(大学|学院|University|College|硕士|本科|学士|MSc|BSc|\bBA\b|\bMA\b)/i;
+  const edu=lines.filter(l=>eduRe.test(l)).slice(0,6);
+  const exp=lines.filter(l=>!eduRe.test(l)&&/(20\d{2})\s*[.\-/年]/.test(l)).slice(0,10);
+  return {name,email,phone,edu,exp,skills:findSkills(text)};
+}
+function vMe(m){
+  head(m,2,"认识我","贴入简历全文，自动拆出联系方式、教育、经历和技能。识别错了可以手动改。");
+  const p=S.profile;
+  m.insertAdjacentHTML("beforeend",`<div class="grid2">
+   <div class="card"><label for="cvText">简历全文（从 PDF 里全选复制过来）</label>
+    <textarea id="cvText" style="min-height:300px" placeholder="吴紫月&#10;电话 / 邮箱&#10;教育经历…&#10;实习经历…">${esc(p.text)}</textarea>
+    <div class="row"><button class="btn" id="parse">解析</button><span class="small muted">只在本机解析，不上传。</span></div></div>
+   <div class="stack">
+    <div class="card"><h2>基本信息</h2>
+     <div class="grid2" style="gap:8px"><label>姓名<input id="pName" value="${esc(p.name)}"></label><label>电话<input id="pPhone" value="${esc(p.phone)}"></label></div>
+     <label>邮箱<input id="pEmail" value="${esc(p.email)}"></label>
+     <div class="small muted">教育：${p.edu.length?p.edu.map(esc).join("；"):"未识别"}</div>
+     <div class="small muted">带日期的经历：${p.exp.length?p.exp.length+" 条":"未识别"}</div></div>
+    <div class="card"><h2>技能</h2><div class="row" id="skills">${p.skills.map(s=>`<span class="chip hit">${esc(s)}<button data-del="${esc(s)}" aria-label="删除 ${esc(s)}">×</button></span>`).join("")||'<span class="small muted">解析后自动出现</span>'}</div>
+     <div class="row"><select id="addSkill" style="flex:1"><option value="">＋ 从词库加技能</option>${Object.keys(SK).filter(k=>!p.skills.includes(k)).map(k=>`<option>${esc(k)}</option>`).join("")}</select></div></div>
+    <div class="card"><h2>我的优势</h2><div class="stack" id="strs">${p.strengths.map((s,i)=>`<div class="row"><span style="flex:1;min-width:0">${esc(s)}</span><button class="btn sm danger" data-sdel="${i}">删除</button></div>`).join("")||'<span class="small muted">写你能举出证据的优势，例如「教过 100+ 中国成人学英语」</span>'}</div>
+     <div class="row"><input id="newStr" placeholder="一句话 + 证据" style="flex:1"><button class="btn sm" id="addStr">添加</button></div></div>
+   </div></div>`);
+  $("#parse").onclick=()=>{const t=$("#cvText").value;const r=parseResume(t);
+    Object.assign(p,{text:t,name:r.name||p.name,email:r.email||p.email,phone:r.phone||p.phone,edu:r.edu,exp:r.exp,skills:[...new Set([...p.skills,...r.skills])]});save();toast(`识别到 ${r.skills.length} 项技能`);render()};
+  $("#cvText").oninput=e=>{p.text=e.target.value;save()};
+  ["pName:name","pPhone:phone","pEmail:email"].forEach(x=>{const[id,k]=x.split(":");$("#"+id).oninput=e=>{p[k]=e.target.value;save()}});
+  m.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{p.skills=p.skills.filter(s=>s!==b.dataset.del);save();render()});
+  $("#addSkill").onchange=e=>{if(e.target.value){p.skills.push(e.target.value);save();render()}};
+  $("#addStr").onclick=()=>{const v=$("#newStr").value.trim();if(v){p.strengths.push(v);save();render()}};
+  m.querySelectorAll("[data-sdel]").forEach(b=>b.onclick=()=>{p.strengths.splice(+b.dataset.sdel,1);save();render()});
+}
+
+/* ================= 03 fit ================= */
+function vFit(m){
+  head(m,3,"岗位分析","用你的技能对 8 类岗位方向打分，看强项、缺口和下一步该补什么。");
+  const mine=mySkills();
+  if(!mine.size){m.insertAdjacentHTML("beforeend",`<div class="empty">还没有技能数据。先去「认识我」贴简历。<br><br><button class="btn" id="toMe">去认识我</button></div>`);$("#toMe").onclick=()=>go("me");return}
+  const res=DIRS.map(d=>{const hit=d.need.filter(k=>mine.has(k)),miss=d.need.filter(k=>!mine.has(k));return Object.assign({},d,{hit,miss,score:Math.round(hit.length/d.need.length*100)})}).sort((a,b)=>b.score-a.score);
+  m.insertAdjacentHTML("beforeend",`<div class="grid2">${res.map(r=>`<div class="card">
+    <div class="row" style="justify-content:space-between"><h2>${r.k}</h2><span class="score ${r.score<50?"low":""}">${r.score}<small style="font-size:13px">%</small></span></div>
+    <div class="bar"><span style="width:${r.score}%"></span></div>
+    <div class="small muted">强项</div><div class="row">${r.hit.map(k=>`<span class="chip hit">${esc(k)}</span>`).join("")||'<span class="small muted">暂无</span>'}</div>
+    <div class="small muted">缺口</div><div class="row">${r.miss.map(k=>`<span class="chip miss">${esc(k)}</span>`).join("")||'<span class="small muted">无</span>'}</div>
+    <div class="sug">下一步：${esc(r.act)}</div></div>`).join("")}</div>`);
+}
+
+/* ================= 04 jd ================= */
+function analyzeJD(text){
+  const lines=text.split(/\n/).map(s=>s.trim()).filter(Boolean);
+  let mode=null;const resp=[],reqs=[];
+  lines.forEach(l=>{
+    if(/(职责|工作内容|岗位描述|你将|responsibilit|what you.?ll do)/i.test(l)&&l.length<30){mode="r";return}
+    if(/(要求|任职|资格|我们希望|加分|优先|requirement|qualification|what we.?re looking)/i.test(l)&&l.length<30){mode="q";return}
+    const item=l.replace(/^[\d一二三四五六七八九十]+[.、)）]\s*|^[•·\-*]\s*/,"");
+    if(mode==="r")resp.push(item);else if(mode==="q")reqs.push(item);
+  });
+  if(!resp.length&&!reqs.length)lines.forEach(l=>(/(优先|要求|具备|熟悉|以上|学历|专业)/.test(l)?reqs:resp).push(l));
+  const mine=mySkills();
+  const kws=Object.keys(SK).map(k=>({k,n:countSkill(text,k)})).filter(x=>x.n>0).sort((a,b)=>b.n-a.n).map(x=>Object.assign(x,{hit:mine.has(x.k)}));
+  const score=kws.length?Math.round(kws.filter(x=>x.hit).length/kws.length*100):0;
+  return {resp,reqs,kws,score};
+}
+function guessCat(t){if(/(产品|运营|研究|评测|AI|用户)/i.test(t))return"AI教育";if(/(学校|EAL|国际部|班主任|教师资格)/i.test(t))return"教师";if(/(机构|校区|学员|课时|新东方|学而思)/.test(t))return"机构";return"AI教育"}
+function vJd(m){
+  head(m,4,"JD 拆解器","粘贴 JD 原文：提取关键词、职责与要求，逐条比对你的技能算匹配度，给出切入建议。");
+  const cur=viewArg&&S.jds.find(j=>j.id===viewArg);
+  m.insertAdjacentHTML("beforeend",`<div class="stack">
+   <div class="card"><div class="grid2" style="gap:8px"><label>公司<input id="jdCo" value="${esc(cur?cur.co:"")}" placeholder="如：好未来"></label><label>岗位<input id="jdRole" value="${esc(cur?cur.role:"")}" placeholder="如：在线教育产品经理"></label></div>
+    <label>JD 原文<textarea id="jdText" style="min-height:180px" placeholder="把岗位职责和任职要求整段粘贴进来">${esc(cur?cur.text:"")}</textarea></label>
+    <div class="row"><button class="btn" id="jdGo">${cur?"重新拆解":"拆解"}</button>${cur?'<button class="btn ghost" id="jdNew">新建拆解</button>':""}</div></div>
+   <div id="jdOut"></div>
+   <div><h2 style="margin-bottom:10px">已拆解 <span class="small muted">${S.jds.length}</span></h2><div class="stack" id="jdList"></div></div></div>`);
+  if(cur)showJD(cur);
+  $("#jdGo").onclick=()=>{const text=$("#jdText").value.trim();if(!text){toast("先粘贴 JD");return}
+    const co=$("#jdCo").value.trim()||"未命名公司",role=$("#jdRole").value.trim()||"未命名岗位";
+    const a=analyzeJD(text);const j=cur||{id:uid(),created:today()};Object.assign(j,{co,role,text},a);
+    if(!cur)S.jds.unshift(j);save();viewArg=j.id;render()};
+  if(cur)$("#jdNew").onclick=()=>go("jd");
+  $("#jdList").innerHTML=S.jds.map(j=>`<div class="card"><div class="row" style="justify-content:space-between"><div style="min-width:0"><b>${esc(j.co)} · ${esc(j.role)}</b><div class="small muted">${esc(j.created)} 拆解 · ${j.kws.length} 个关键词</div></div><span class="score ${j.score<50?"low":""}" style="font-size:22px">${j.score}%</span></div>
+    <div class="row">${j.kws.slice(0,8).map(x=>`<span class="chip ${x.hit?"hit":"miss"}">${esc(x.k)}</span>`).join("")}</div>
+    <div class="row"><button class="btn sm ghost" data-open="${j.id}">拆解详情</button><button class="btn sm" data-add="${j.id}">加入投递</button><button class="btn sm ghost" data-cv="${j.id}">定制简历</button><button class="btn sm danger" data-rm="${j.id}" style="margin-left:auto">删除</button></div></div>`).join("")||'<div class="empty">还没有拆解过 JD</div>';
+  m.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>go("jd",b.dataset.open));
+  m.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>addJobFromJD(b.dataset.add));
+  m.querySelectorAll("[data-cv]").forEach(b=>b.onclick=()=>go("cv",b.dataset.cv));
+  m.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>armed(b,()=>{S.jds=S.jds.filter(j=>j.id!==b.dataset.rm);save();viewArg=null;render()}));
+}
+function showJD(j){
+  const miss=j.kws.filter(x=>!x.hit);
+  const tips=[];
+  if(j.score<40)tips.push("匹配度偏低：先确认硬性要求（学历、专业、证书、经验年限）能不能过，过不了就别投。");
+  miss.slice(0,4).forEach(x=>tips.push(`简历里没出现「${x.k}」：在最相关的那段经历里补一句可验证的动作和结果。`));
+  if(j.kws.some(x=>x.k==="学习科学"||x.k==="二语习得"))tips.push("JD 提到学习效果或语言习得，把论文放进前半页，讲「怎么证明用户真的学会了」。");
+  if(j.kws.some(x=>x.k==="教学"))tips.push("把教学经历写成用户洞察：带过多少学员、发现了什么共性问题、你改了什么。");
+  $("#jdOut").innerHTML=`<div class="grid2">
+   <div class="card"><div class="row" style="justify-content:space-between"><h2>${esc(j.co)} · ${esc(j.role)}</h2><span class="score ${j.score<50?"low":""}">${j.score}%</span></div>
+    <div class="small muted">关键词（实心 = 你有，虚线 = 缺）</div><div class="row">${j.kws.map(x=>`<span class="chip ${x.hit?"hit":"miss"}">${esc(x.k)} ×${x.n}</span>`).join("")||'<span class="small muted">词库没识别到关键词</span>'}</div>
+    <div class="stack">${tips.map(t=>`<div class="sug">${esc(t)}</div>`).join("")}</div>
+    <div class="row"><button class="btn" id="oAdd">加入投递</button><button class="btn ghost" id="oCv">定制简历</button></div></div>
+   <div class="card"><h3>职责 <span class="small muted">${j.resp.length}</span></h3><ul style="margin:0;padding-left:18px">${j.resp.map(r=>`<li>${esc(r)}</li>`).join("")}</ul>
+    <h3>要求 <span class="small muted">${j.reqs.length}</span></h3><ul style="margin:0;padding-left:18px">${j.reqs.map(r=>`<li>${esc(r)}</li>`).join("")}</ul></div></div>`;
+  $("#oAdd").onclick=()=>addJobFromJD(j.id);$("#oCv").onclick=()=>go("cv",j.id);
+}
+function addJobFromJD(id){const j=S.jds.find(x=>x.id===id);if(!j)return;
+  if(S.jobs.some(x=>x.jdId===id)){toast("已经在看板里");return}
+  S.jobs.push({id:uid(),co:j.co,role:j.role,cat:guessCat(j.text),stage:"待投",due:"",url:"",note:`匹配度 ${j.score}%`,jdId:id,updated:today(),localEdit:true});save();toast("已加入投递看板")}
+function armed(b,fn){if(b.dataset.armed){fn()}else{b.dataset.armed=1;const t=b.textContent;b.textContent="再点一次确认";setTimeout(()=>{if(b.isConnected){delete b.dataset.armed;b.textContent=t}},3000)}}
+
+/* ================= 05 cv ================= */
+function vCv(m){
+  head(m,5,"简历定制","选一份 JD，逐段看命中和缺口，按建议改写，存成针对这个岗位的版本。");
+  if(!S.profile.text.trim()){m.insertAdjacentHTML("beforeend",`<div class="empty">先在「认识我」贴简历全文。<br><br><button class="btn" id="toMe">去认识我</button></div>`);$("#toMe").onclick=()=>go("me");return}
+  if(!S.jds.length){m.insertAdjacentHTML("beforeend",`<div class="empty">先在「JD 拆解器」拆一个岗位。<br><br><button class="btn" id="toJd">去拆 JD</button></div>`);$("#toJd").onclick=()=>go("jd");return}
+  const jd=S.jds.find(j=>j.id===viewArg)||S.jds[0];
+  let ver=S.versions.find(v=>v.id===viewArg);
+  const src=ver?ver.paras:splitParas(S.profile.text);
+  const kws=jd.kws.map(x=>x.k);
+  const hitsOf=p=>kws.filter(k=>countSkill(p,k)>0);
+  const missing=kws.filter(k=>!src.some(p=>countSkill(p,k)>0));
+  m.insertAdjacentHTML("beforeend",`<div class="stack">
+   <div class="card"><label for="cvJd">针对哪个岗位</label><select id="cvJd">${S.jds.map(j=>`<option value="${j.id}" ${j.id===jd.id?"selected":""}>${esc(j.co)} · ${esc(j.role)}（${j.score}%）</option>`).join("")}</select></div>
+   <div class="grid2" style="grid-template-columns:minmax(0,1fr)">
+    <div class="card"><h2>改写建议</h2>${missing.map(k=>`<div class="sug">「${esc(k)}」没在简历里出现：在相关经历段补一句可验证的动作和结果，例如「主导 ${esc(k)} 相关工作，使…指标提升 x%」。数字必须是真的。</div>`).join("")||'<div class="small muted">JD 关键词在简历里都出现了。</div>'}
+     <div class="small muted">已存版本 ${S.versions.length}</div>
+     <div class="stack">${S.versions.map(v=>`<div class="row"><button class="btn sm ghost" data-ver="${v.id}" style="flex:1;text-align:left">${esc(v.title)}</button><button class="btn sm danger" data-vdel="${v.id}">删除</button></div>`).join("")}</div></div>
+    <div class="card"><h2>${ver?esc(ver.title):"逐段改写"}</h2><div class="stack" id="paras">${src.map((p,i)=>{const h=hitsOf(p);return `<div class="para"><div class="meta"><span>段落 ${i+1}</span>${h.length?`<b>命中 ${h.length} 个关键词</b>`:"<span>未命中关键词</span>"}</div><textarea data-i="${i}">${esc(p)}</textarea></div>`}).join("")}</div>
+     <div class="row"><button class="btn" id="vSave">保存版本</button><button class="btn ghost" id="vCopy">复制全文</button><button class="btn ghost" id="vTxt">导出 txt</button></div>
+     <p class="small muted" style="margin:0">保存后固定留存，可随时载入继续改；导出的纯文本可以直接粘贴到招聘网站或邮件。</p></div>
+   </div></div>`);
+  const paras=()=>[...m.querySelectorAll("#paras textarea")].map(t=>t.value);
+  $("#cvJd").onchange=e=>go("cv",e.target.value);
+  $("#vSave").onclick=()=>{const title=`${jd.co} · ${jd.role} · ${today()}`;if(ver){ver.paras=paras();ver.title=title}else S.versions.unshift({id:uid(),jdId:jd.id,title,paras:paras(),created:today()});save();toast("版本已保存");render()};
+  $("#vCopy").onclick=()=>copy(paras().join("\n\n"));
+  $("#vTxt").onclick=()=>{try{const b=new Blob([paras().join("\n\n")],{type:"text/plain"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=`简历-${jd.co}.txt`;document.body.appendChild(a);a.click();a.remove()}catch(e){copy(paras().join("\n\n"))}};
+  m.querySelectorAll("[data-ver]").forEach(b=>b.onclick=()=>go("cv",b.dataset.ver));
+  m.querySelectorAll("[data-vdel]").forEach(b=>b.onclick=()=>armed(b,()=>{S.versions=S.versions.filter(v=>v.id!==b.dataset.vdel);save();viewArg=null;render()}));
+}
+function splitParas(t){let ps=t.split(/\n\s*\n/).map(s=>s.trim()).filter(Boolean);if(ps.length<4)ps=t.split(/\n/).map(s=>s.trim()).filter(Boolean);return ps}
+
+/* ================= 06 board ================= */
+let boardCat="全部";
+function vBoard(m){
+  head(m,6,"投递看板","待投 → 已投 → 笔试 → 面试 → Offer → 结束。电脑上拖动卡片，手机上点卡片下面的按钮。进入「面试」会自动生成陪练题。");
+  m.insertAdjacentHTML("beforeend",`<div class="row" style="justify-content:space-between;margin-bottom:12px"><div class="seg" id="bf">${["全部",...CATS].map(c=>`<button aria-pressed="${c===boardCat}">${c}</button>`).join("")}</div><button class="btn" id="addJob">＋ 加岗位</button></div><div class="board" id="board"></div>`);
+  m.querySelectorAll("#bf button").forEach(b=>b.onclick=()=>{boardCat=b.textContent;render()});
+  $("#addJob").onclick=()=>editJob(null);
+  const shown=S.jobs.filter(j=>boardCat==="全部"||j.cat===boardCat);
+  const bd=$("#board");
+  STAGES.forEach((s,si)=>{
+    const items=shown.filter(j=>j.stage===s).sort((a,b)=>(a.due||"9")<(b.due||"9")?-1:1);
+    const col=document.createElement("section");col.className="col";col.dataset.stage=s;
+    col.innerHTML=`<header><b>${s}</b><span class="small muted">${items.length}</span></header>`+(items.length?"":`<div class="small muted" style="text-align:center;padding:20px 0">拖卡片到这里</div>`);
+    items.forEach(j=>{const d=daysLeft(j.due);const dueTxt=d===null?"":d<0?`已过 ${-d} 天`:d===0?"今天截止":`剩 ${d} 天`;
+      const c=document.createElement("article");c.className="jc";c.draggable=true;c.dataset.id=j.id;
+      c.innerHTML=`<div class="row" style="justify-content:space-between;align-items:flex-start;flex-wrap:nowrap"><div style="min-width:0"><div class="co">${esc(j.co)}</div><div class="role">${esc(j.role)}</div></div><span class="tag ${j.cat==="教师"?"t":j.cat==="机构"?"o":"a"}">${esc(j.cat)}</span></div>
+       ${j.note?`<div class="note">${esc(j.note)}</div>`:""}
+       <div class="row" style="justify-content:space-between">${dueTxt&&s!=="结束"?`<span class="due ${d<=3?"hot":d<=7?"soon":""}">${dueTxt}</span>`:`<span class="small muted">${esc(j.updated||"")}</span>`}<span class="row">${j.url?`<a class="small" href="${esc(j.url)}" target="_blank" rel="noopener" style="color:var(--pine)">打开</a>`:""}<button class="btn sm ghost" data-e>编辑</button></span></div>
+       <div class="mv">${si>0?`<button data-b>← ${STAGES[si-1]}</button>`:""}${si<STAGES.length-1?`<button data-f style="border-color:var(--pine);font-weight:600">${STAGES[si+1]} →</button>`:""}</div>`;
+      c.querySelector("[data-e]").onclick=()=>editJob(j);
+      const f=c.querySelector("[data-f]");if(f)f.onclick=()=>moveJob(j,STAGES[si+1]);
+      const b=c.querySelector("[data-b]");if(b)b.onclick=()=>moveJob(j,STAGES[si-1]);
+      c.addEventListener("dragstart",e=>{e.dataTransfer.setData("text/plain",j.id)});
+      col.appendChild(c)});
+    col.addEventListener("dragover",e=>{e.preventDefault();col.classList.add("over")});
+    col.addEventListener("dragleave",()=>col.classList.remove("over"));
+    col.addEventListener("drop",e=>{e.preventDefault();col.classList.remove("over");const j=S.jobs.find(x=>x.id===e.dataTransfer.getData("text/plain"));if(j&&j.stage!==s)moveJob(j,s)});
+    bd.appendChild(col);
+  });
+}
+function moveJob(j,stage){j.stage=stage;j.updated=today();j.localEdit=true;if(stage==="已投"&&!j.appliedOn)j.appliedOn=today();
+  if(stage==="面试"&&!S.practice[j.id]){S.practice[j.id]={answers:{},created:today()};toast("已加入面试陪练")}save();render()}
+function editJob(j){
+  const d=$("#dlg");const x=j||{co:"",role:"",cat:boardCat!=="全部"?boardCat:"AI教育",stage:"待投",due:"",url:"",note:""};
+  d.innerHTML=`<form method="dialog" class="stack" id="jf"><h2>${j?"编辑岗位":"加岗位"}</h2>
+   <div class="grid2" style="gap:8px;grid-template-columns:1fr 1fr"><label>公司 / 学校<input id="fCo" required value="${esc(x.co)}"></label><label>岗位<input id="fRole" required value="${esc(x.role)}"></label>
+   <label>类型<select id="fCat">${CATS.map(c=>`<option ${c===x.cat?"selected":""}>${c}</option>`).join("")}</select></label><label>阶段<select id="fStage">${STAGES.map(c=>`<option ${c===x.stage?"selected":""}>${c}</option>`).join("")}</select></label>
+   <label>截止日期<input id="fDue" type="date" value="${esc(x.due)}"></label><label>链接<input id="fUrl" value="${esc(x.url)}"></label></div>
+   <label>备注<textarea id="fNote" style="min-height:80px">${esc(x.note)}</textarea></label>
+   <div class="row"><button class="btn" value="ok">保存</button><button class="btn ghost" value="cancel" formnovalidate>取消</button>${j?'<button class="btn danger" type="button" id="fDel" style="margin-left:auto">删除</button>':""}</div></form>`;
+  d.showModal();
+  if(j)$("#fDel").onclick=e=>armed(e.target,()=>{S.jobs=S.jobs.filter(y=>y.id!==j.id);save();d.close();render()});
+  $("#jf").onsubmit=e=>{if(e.submitter&&e.submitter.value==="cancel")return;
+    const v={co:$("#fCo").value.trim(),role:$("#fRole").value.trim(),cat:$("#fCat").value,due:$("#fDue").value,url:$("#fUrl").value.trim(),note:$("#fNote").value.trim()};
+    const st=$("#fStage").value;
+    if(j){Object.assign(j,v,{updated:today(),localEdit:true});if(st!==j.stage){setTimeout(()=>moveJob(j,st));}}
+    else{const n=Object.assign({id:uid(),stage:"待投",updated:today(),localEdit:true},v);S.jobs.push(n);if(st!=="待投")setTimeout(()=>moveJob(n,st))}
+    save();setTimeout(render)};
+}
+
+/* ================= 07 practice ================= */
+const QB={
+ "自我介绍":["1 分钟中文自我介绍：我是谁、做过什么、为什么是这个岗位","1-minute self-introduction in English","用三个词形容自己，每个配一个例子"],
+ "行为面":["讲一次你推动一件没人负责的事（STAR）","讲一次失败，以及你后来改了什么","讲一次和别人意见不一致，你怎么处理","几件事同时到期，你怎么排优先级"],
+ "专业面":{"AI教育":["你最常用的学习 App 有什么问题？你会怎么改？","怎么判断一个学习产品真的让用户学会了，而不只是更活跃？","设计一个提升 7 日留存的方案，说清指标"],
+   "教师":["一节课里学生水平差距很大，你怎么安排？","现场演示 5 分钟你最擅长的教学环节","学生一直不开口，你怎么办？"],
+   "机构":["家长质疑效果，你怎么回应？","试听课怎么上才能促成报名？","一个班里有人总迟到不交作业，你怎么处理？"]},
+ "反问":["这个岗位前三个月做到什么程度算合格？","团队现在最大的挑战是什么？","新人通常怎么带？"]
+};
+function questionsFor(job){
+  const jd=job.jdId&&S.jds.find(x=>x.id===job.jdId);
+  const g={"自我介绍":QB["自我介绍"],"行为面":QB["行为面"],"专业面":QB["专业面"][job.cat]||QB["专业面"]["AI教育"],
+    "针对 JD":[`为什么选择${job.co}？为什么是这个岗位？`,...(jd?jd.kws.slice(0,3).map(x=>`JD 提到「${x.k}」，讲一段你做过的相关经历`):["把 JD 粘进「JD 拆解器」并加入投递，这里会生成针对性问题"])],"反问":QB["反问"]};
+  return g;
+}
+let pTab="interview";
+function vPractice(m){
+  head(m,7,"面试陪练","进入「面试」的岗位自动出现在这里，按题型分组练。弹药库放你从小红书收藏的面经：先说出来，才能看笔记。");
+  m.insertAdjacentHTML("beforeend",`<div class="seg" id="pt" style="margin-bottom:14px"><button data-t="interview" aria-pressed="${pTab==="interview"}">面试题</button><button data-t="ammo" aria-pressed="${pTab==="ammo"}">弹药库 ${S.ammo.length}</button></div><div id="pBody"></div>`);
+  m.querySelectorAll("#pt button").forEach(b=>b.onclick=()=>{pTab=b.dataset.t;render()});
+  if(pTab==="ammo")return vAmmo($("#pBody"));
+  const body=$("#pBody");
+  const list=S.jobs.filter(j=>S.practice[j.id]);
+  if(!list.length){body.innerHTML=`<div class="empty">还没有进入面试的岗位。在看板里把卡片移到「面试」就会出现在这里。<br>现在可以先去弹药库练通用题。</div>`;return}
+  const job=list.find(j=>j.id===viewArg)||list[0];const rec=S.practice[job.id];
+  body.innerHTML=`<div class="stack"><div class="card"><label for="pj">岗位</label><select id="pj">${list.map(j=>`<option value="${j.id}" ${j.id===job.id?"selected":""}>${esc(j.co)} · ${esc(j.role)}</option>`).join("")}</select></div>
+   ${Object.entries(questionsFor(job)).map(([g,qs])=>`<div class="card"><h2>${g}</h2>${qs.map((q,i)=>{const id=g+"#"+i;return `<div class="q"><b>${esc(q)}</b><textarea data-q="${esc(id)}" placeholder="先自己写要点，再大声说一遍" style="min-height:70px">${esc(rec.answers[id]||"")}</textarea></div>`}).join("")}</div>`).join("")}</div>`;
+  $("#pj").onchange=e=>go("practice",e.target.value);
+  body.querySelectorAll("[data-q]").forEach(t=>t.oninput=()=>{rec.answers[t.dataset.q]=t.value;save()});
+}
+const ATYPES=["自我介绍","行为面","专业面","反问","公司面经"];
+function vAmmo(body){
+  const done=S.ammo.filter(a=>a.rating===2).length;
+  body.innerHTML=`<div class="stack">
+   <div class="card" style="background:var(--pine-soft)"><div class="row" style="justify-content:space-between"><span>${S.ammo.length?`${S.ammo.length} 条弹药，能讲清 ${done} 条`:"收藏不算会，说出来才算。"}</span><button class="btn" id="drillGo" ${S.ammo.length?"":"disabled"}>开练 5 题</button></div></div>
+   <details class="card"><summary>＋ 存一条小红书面经</summary>
+    <label>面试官会怎么问<input id="aQ" placeholder="如：你为什么从研究转向产品？"></label>
+    <div class="grid2" style="gap:8px;grid-template-columns:1fr 1fr"><label>题型<select id="aT">${ATYPES.map(t=>`<option>${t}</option>`).join("")}</select></label><label>适用<select id="aF"><option>通用</option>${CATS.map(c=>`<option>${c}</option>`).join("")}</select></label></div>
+    <label>笔记要点<textarea id="aN" placeholder="粘贴笔记里的关键句"></textarea></label><label>来源<input id="aS" placeholder="笔记标题 / 博主"></label>
+    <div class="row"><button class="btn" id="aAdd">保存</button></div></details>
+   <div class="stack">${[...S.ammo].sort((a,b)=>(a.rating??-1)-(b.rating??-1)).map(a=>`<div class="card"><div class="row" style="justify-content:space-between;flex-wrap:nowrap;align-items:flex-start"><b style="min-width:0">${esc(a.q)}</b><span class="tag">${a.rating===2?"能讲清":a.rating===1?"说了一半":a.rating===0?"说不出":"没练过"}</span></div>
+     <div class="row small muted"><span class="tag">${esc(a.type)}</span><span class="tag">${esc(a.for)}</span><span>练过 ${a.tries||0} 次</span></div>
+     ${a.mine?`<div class="small" style="border-left:3px solid var(--pine);padding-left:8px;white-space:pre-wrap">${esc(a.mine)}</div>`:""}
+     <div class="row"><button class="btn sm" data-one="${a.id}">练这题</button><button class="btn sm danger" data-adel="${a.id}" style="margin-left:auto">删除</button></div></div>`).join("")||'<div class="empty">还没有弹药。把小红书收藏的面经截图发给 Claude，它会拆好放进仓库，再点「概览 → 从仓库同步」。</div>'}</div></div>`;
+  $("#aAdd").onclick=()=>{const q=$("#aQ").value.trim(),n=$("#aN").value.trim();if(!q||!n){toast("问题和要点都要填");return}
+    S.ammo.push({id:uid(),q,type:$("#aT").value,for:$("#aF").value,notes:n,src:$("#aS").value.trim()});save();render()};
+  $("#drillGo").onclick=()=>drill([...S.ammo].sort((a,b)=>(a.rating??-1)-(b.rating??-1)||(a.tries||0)-(b.tries||0)).slice(0,5));
+  body.querySelectorAll("[data-one]").forEach(b=>b.onclick=()=>drill(S.ammo.filter(a=>a.id===b.dataset.one)));
+  body.querySelectorAll("[data-adel]").forEach(b=>b.onclick=()=>armed(b,()=>{S.ammo=S.ammo.filter(a=>a.id!==b.dataset.adel);save();render()}));
+}
+function drill(deck){
+  if(!deck.length)return;let i=0,t=null;
+  const el=document.createElement("div");el.className="drill";document.body.appendChild(el);document.body.style.overflow="hidden";
+  const end=()=>{clearInterval(t);el.remove();document.body.style.overflow="";render()};
+  const show=()=>{const a=deck[i];let secs=60;
+    el.innerHTML=`<div class="in"><div class="row" style="justify-content:space-between"><span class="small muted">第 ${i+1} / ${deck.length} 题</span><button class="btn sm ghost" id="dq">结束</button></div>
+     <div class="row"><span class="tag">${esc(a.type)}</span><span class="tag">${esc(a.for)}</span></div><p class="bigq">${esc(a.q)}</p>
+     <div id="s1" class="stack"><div class="row" style="justify-content:space-between"><span class="small muted">先答。写满 15 字，或大声说完 60 秒，才能看笔记。</span><span class="timer" id="tm">60</span></div>
+      <label for="da">我的回答<textarea id="da"></textarea></label>
+      <div class="row"><button class="btn" id="rv" disabled>对答案</button><button class="btn ghost" id="said">我已经说完了</button></div></div>
+     <div id="s2" class="stack" hidden><div class="card"><span class="small muted">笔记要点</span><div style="white-space:pre-wrap">${esc(a.notes)}</div>${a.src?`<span class="small muted">来源：${esc(a.src)}</span>`:""}</div>
+      <p class="small muted" style="margin:0">漏了哪一点？在上面补一句再打分。</p>
+      <div class="row"><button class="btn ghost" data-r="0" style="flex:1">说不出</button><button class="btn ghost" data-r="1" style="flex:1">说了一半</button><button class="btn" data-r="2" style="flex:1">能讲清</button></div></div></div>`;
+    el.querySelector("#dq").onclick=end;
+    const rv=el.querySelector("#rv");
+    clearInterval(t);t=setInterval(()=>{secs--;el.querySelector("#tm").textContent=Math.max(secs,0);if(secs<=0){clearInterval(t);rv.disabled=false}},1000);
+    el.querySelector("#da").oninput=e=>{if(e.target.value.trim().length>=15)rv.disabled=false};
+    el.querySelector("#said").onclick=()=>{rv.disabled=false};
+    rv.onclick=()=>{clearInterval(t);el.querySelector("#s2").hidden=false;el.querySelector("#s2").scrollIntoView({block:"start"})};
+    el.querySelectorAll("[data-r]").forEach(b=>b.onclick=()=>{const mine=el.querySelector("#da").value.trim();const real=S.ammo.find(x=>x.id===a.id);
+      if(real){real.rating=+b.dataset.r;real.tries=(real.tries||0)+1;if(mine)real.mine=mine;save()}
+      i++;if(i<deck.length)show();else{toast("练完了");end()}});
+  };show();
+}
+
+/* ================= boot ================= */
+window.addEventListener("hashchange",()=>{const v=location.hash.slice(1);if(VIEWS.some(x=>x[0]===v)&&v!==view){view=v;viewArg=null;render()}});
+render();
+if(!S.seedVersion)syncSeed(false);
+})();
+</script>
+</body>
+</html>
