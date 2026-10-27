@@ -46,6 +46,16 @@ nav.views button i{font:12px var(--mono);font-style:normal;opacity:.7}
 nav.views button[aria-current="page"]{background:var(--pine-soft);color:var(--ink);font-weight:600}
 nav.views button:focus-visible{outline:2px solid var(--pine)}
 .side .foot{margin-top:auto;font-size:12px;color:var(--muted);padding:0 8px}
+.sync-pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:5px 9px;font-size:11px;white-space:nowrap}
+.sync-pill[data-state="ok"]{border-color:var(--ok);color:var(--ok)}
+.sync-pill[data-state="busy"]{border-color:var(--ochre);color:var(--ochre)}
+.sync-pill[data-state="error"]{border-color:var(--rust);color:var(--rust)}
+.cloud-gate{position:fixed;inset:0;z-index:80;background:color-mix(in srgb,var(--paper) 92%,transparent);backdrop-filter:blur(8px);display:grid;place-items:center;padding:20px}
+.cloud-gate[hidden]{display:none}
+.cloud-login{width:min(420px,100%);background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:0 18px 60px rgba(0,0,0,.16)}
+.cloud-login h2{font-size:22px;margin-bottom:4px}
+.cloud-login .moon{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;background:var(--pine-soft);font-size:24px;margin-bottom:12px}
+.cloud-error{color:var(--rust);font-size:12px;min-height:20px}
 main{padding:32px clamp(16px,4vw,48px) 80px;min-width:0;max-width:1100px}
 .eyebrow{font:12px var(--mono);letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
 h1{font:900 30px/1.2 var(--serif);margin:4px 0 6px;text-wrap:balance}
@@ -119,6 +129,8 @@ details summary{cursor:pointer;color:var(--muted);font-size:13px}
   .side{position:sticky;top:0;z-index:20;height:auto;border-right:0;border-bottom:1px solid var(--line);background:var(--paper);
     padding:10px max(16px,env(safe-area-inset-right,0px)) 8px max(16px,env(safe-area-inset-left,0px));gap:8px}
   .side .foot,.brand small{display:none}
+  .side{gap:7px}
+  .brand{justify-content:space-between}
   .brand .mk{width:28px;height:28px;font-size:14px}
   nav.views{flex-direction:row;overflow-x:auto;gap:4px;scrollbar-width:none}
   nav.views::-webkit-scrollbar{display:none}
@@ -134,19 +146,37 @@ details summary{cursor:pointer;color:var(--muted);font-size:13px}
 <body>
 <div class="app">
   <aside class="side">
-    <div class="brand"><div class="mk">龙</div><div><b>求职一条龙</b><small>个人求职工作台</small></div></div>
+    <div class="brand"><div class="mk">龙</div><div><b>求职一条龙</b><small>个人求职工作台</small></div><button class="sync-pill" id="syncStatus" type="button" data-state="busy">连接中</button></div>
     <nav class="views" id="nav"></nav>
-    <div class="foot">数据存在这台设备的浏览器里。<br>记得在「概览」里定期导出备份。</div>
+    <div class="foot">本地自动保存；登录后同步到腾讯云。<br><button class="btn sm ghost" id="cloudAccount" type="button">云端账户</button></div>
   </aside>
   <main id="main"></main>
 </div>
 <dialog id="dlg"></dialog>
+<div class="cloud-gate" id="cloudGate" hidden>
+  <form class="cloud-login" id="cloudLogin">
+    <div class="moon" aria-hidden="true">☾</div>
+    <h2>紫月的求职工作台</h2>
+    <p class="lead">登录后，手机和电脑会使用同一份投递记录。</p>
+    <div class="stack">
+      <label>用户名<input id="cloudUsername" value="ZIYUE" autocomplete="username" autocapitalize="characters"></label>
+      <label>密码<input id="cloudPassword" type="password" autocomplete="current-password" required></label>
+      <div class="cloud-error" id="cloudError" role="alert"></div>
+      <button class="btn" id="cloudLoginBtn" type="submit">登录并同步</button>
+      <button class="btn ghost" id="offlineBtn" type="button">暂时离线使用</button>
+      <div class="small muted">密码只交给腾讯云身份认证，本页面不会保存密码。</div>
+    </div>
+  </form>
+</div>
 
+<script src="https://static.cloudbase.net/cloudbase-js-sdk/2.28.6/cloudbase.full.js"></script>
 <script>
 (function(){
 "use strict";
 /* ================= state ================= */
 const KEY="qz.v1";
+const SYNC_KEY="qz.v1.sync";
+const CLOUD_ENV="subjective-snake-d9ecykide3a2c97";
 const STAGES=["待投","已投","笔试","面试","Offer","结束"];
 const CATS=["AI教育","教师","机构"];
 const VIEWS=[["overview","概览"],["me","认识我"],["fit","岗位分析"],["jd","JD 拆解器"],["cv","简历定制"],["board","投递看板"],["practice","面试陪练"]];
@@ -154,13 +184,134 @@ const blank=()=>({profile:{text:"",name:"",email:"",phone:"",edu:[],exp:[],skill
 let S=load();
 function load(){try{const s=JSON.parse(localStorage.getItem(KEY)||"null");if(s)return Object.assign(blank(),s)}catch(e){}return blank()}
 let saveT=null;
-function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast("保存失败：浏览器存储不可用")}},150)}
+let cloudSaveT=null,cloudReady=false,cloudBusy=false,cloudUserId="",lastCloudStamp=0,app=null,auth=null,rdb=null;
+function localStamp(){return +(localStorage.getItem(SYNC_KEY)||0)}
+function saveLocal(mark=true){try{localStorage.setItem(KEY,JSON.stringify(S));if(mark)localStorage.setItem(SYNC_KEY,String(Date.now()))}catch(e){toast("保存失败：浏览器存储不可用")}}
+function save(){clearTimeout(saveT);saveT=setTimeout(()=>{saveLocal(true);queueCloudSave()},120)}
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
 function toast(t){const el=document.createElement("div");el.className="toast";el.textContent=t;document.body.appendChild(el);setTimeout(()=>el.remove(),2200)}
 async function copy(t){try{await navigator.clipboard.writeText(t);toast("已复制")}catch(e){toast("复制失败，请长按手动复制")}}
+
+/* ================= CloudBase sync ================= */
+function setSync(label,state=""){
+  const p=$("#syncStatus");if(p){p.textContent=label;p.dataset.state=state}
+  const a=$("#cloudAccount");if(a)a.textContent=cloudReady?"退出云端":"云端账户";
+}
+function cloudMessage(error){
+  const raw=String(error?.message||error?.error_description||error||"");
+  if(/password|credential|用户名|密码|账号/i.test(raw))return "用户名或密码不正确，请再试一次。";
+  if(/domain|cors|origin|域名/i.test(raw))return "当前网址还没有加入腾讯云安全域名。";
+  if(/network|fetch|timeout|网络/i.test(raw))return "暂时连不上腾讯云，请检查网络后重试。";
+  return raw||"连接失败，请稍后重试。";
+}
+function showCloudGate(message=""){
+  $("#cloudError").textContent=message;
+  $("#cloudGate").hidden=false;
+  setTimeout(()=>$("#cloudPassword").focus(),50);
+}
+function hideCloudGate(){ $("#cloudGate").hidden=true;$("#cloudPassword").value="";$("#cloudError").textContent="" }
+function rowsOf(result){
+  const d=result?.data;
+  if(Array.isArray(d))return d;
+  if(Array.isArray(d?.data))return d.data;
+  return d&&typeof d==="object"?[d]:[];
+}
+async function fetchCloudRow(){
+  const result=await rdb.from("job_workspace").select("*").limit(1);
+  if(result?.error)throw result.error;
+  return rowsOf(result)[0]||null;
+}
+function applyCloudRow(row){
+  if(!row?.state)return;
+  S=Object.assign(blank(),typeof row.state==="string"?JSON.parse(row.state):row.state);
+  const stamp=Date.parse(row.updated_at)||Date.now();
+  lastCloudStamp=stamp;
+  try{localStorage.setItem(KEY,JSON.stringify(S));localStorage.setItem(SYNC_KEY,String(stamp))}catch(e){}
+  render();
+}
+function queueCloudSave(){
+  if(!cloudReady)return;
+  clearTimeout(cloudSaveT);
+  cloudSaveT=setTimeout(()=>saveCloud(),650);
+}
+async function saveCloud(){
+  if(!cloudReady||cloudBusy)return;
+  cloudBusy=true;setSync("同步中","busy");
+  const stamp=new Date().toISOString();
+  try{
+    let result;
+    if(cloudUserId){
+      result=await rdb.from("job_workspace").upsert({user_id:cloudUserId,state:S,updated_at:stamp},{onConflict:"user_id"});
+    }else{
+      result=await rdb.from("job_workspace").insert({state:S,updated_at:stamp});
+    }
+    if(result?.error)throw result.error;
+    const row=await fetchCloudRow();
+    if(row){cloudUserId=row.user_id;lastCloudStamp=Date.parse(row.updated_at)||Date.now()}
+    try{localStorage.setItem(SYNC_KEY,String(lastCloudStamp))}catch(e){}
+    setSync("已同步","ok");
+  }catch(error){
+    console.error("CloudBase save failed",error);
+    setSync("同步失败","error");
+  }finally{cloudBusy=false}
+}
+async function pullCloud(announce=false,initial=false){
+  if(!cloudReady||cloudBusy)return;
+  cloudBusy=true;if(announce)setSync("检查中","busy");
+  try{
+    let row=await fetchCloudRow();
+    if(!row){
+      cloudBusy=false;
+      await saveCloud();
+      if(announce)toast("本机数据已上传腾讯云");
+      return;
+    }
+    cloudUserId=row.user_id;
+    const remoteStamp=Date.parse(row.updated_at)||0;
+    if(initial&&localStamp()>remoteStamp){
+      cloudBusy=false;
+      await saveCloud();
+      return;
+    }
+    if(initial||remoteStamp>lastCloudStamp){
+      applyCloudRow(row);
+      if(announce)toast("已载入云端最新数据");
+    }
+    setSync("已同步","ok");
+  }catch(error){
+    console.error("CloudBase pull failed",error);
+    setSync("同步失败","error");
+    if(announce)toast(cloudMessage(error));
+  }finally{cloudBusy=false}
+}
+async function connectCloud(){
+  cloudReady=true;setSync("连接中","busy");
+  await pullCloud(false,true);
+}
+async function initCloud(){
+  if(!window.cloudbase){setSync("离线","error");return}
+  try{
+    app=cloudbase.init({env:CLOUD_ENV});
+    auth=app.auth();
+    rdb=app.rdb();
+    const state=await auth.getLoginState();
+    if(state)await connectCloud();
+    else{setSync("未登录","");showCloudGate()}
+  }catch(error){
+    console.error("CloudBase init failed",error);
+    setSync("连接失败","error");
+    showCloudGate(cloudMessage(error));
+  }
+}
+async function signOutCloud(){
+  try{await auth.signOut()}catch(e){}
+  cloudReady=false;cloudUserId="";lastCloudStamp=0;
+  setSync("未登录","");
+  showCloudGate();
+}
 
 /* ================= knowledge base ================= */
 const SK={
@@ -567,8 +718,33 @@ function drill(deck){
 
 /* ================= boot ================= */
 window.addEventListener("hashchange",()=>{const v=location.hash.slice(1);if(VIEWS.some(x=>x[0]===v)&&v!==view){view=v;viewArg=null;render()}});
+$("#cloudLogin").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const username=$("#cloudUsername").value.trim();
+  const password=$("#cloudPassword").value;
+  const btn=$("#cloudLoginBtn");
+  if(!username||!password){$("#cloudError").textContent="请填写用户名和密码。";return}
+  btn.disabled=true;btn.textContent="正在登录…";$("#cloudError").textContent="";
+  try{
+    if(!app){app=cloudbase.init({env:CLOUD_ENV});auth=app.auth();rdb=app.rdb()}
+    await auth.signIn({username,password});
+    hideCloudGate();
+    await connectCloud();
+    toast("登录成功，云端同步已开启");
+  }catch(error){
+    console.error("CloudBase sign in failed",error);
+    $("#cloudError").textContent=cloudMessage(error);
+  }finally{btn.disabled=false;btn.textContent="登录并同步"}
+});
+$("#offlineBtn").onclick=()=>{hideCloudGate();setSync("离线","");toast("当前使用本机数据")};
+$("#syncStatus").onclick=()=>cloudReady?pullCloud(true):showCloudGate();
+$("#cloudAccount").onclick=()=>cloudReady?signOutCloud():showCloudGate();
+window.addEventListener("focus",()=>{if(cloudReady)pullCloud(false)});
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&cloudReady)pullCloud(false)});
+setInterval(()=>{if(cloudReady&&document.visibilityState==="visible")pullCloud(false)},12000);
 render();
 if(!S.seedVersion)syncSeed(false);
+initCloud();
 })();
 </script>
 </body>
