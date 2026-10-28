@@ -156,10 +156,10 @@ details summary{cursor:pointer;color:var(--muted);font-size:13px}
 <div class="cloud-gate" id="cloudGate" hidden>
   <form class="cloud-login" id="cloudLogin">
     <div class="moon" aria-hidden="true">☾</div>
-    <h2>紫月的求职工作台</h2>
+    <h2>紫月的求职工作台</h2><div class="small muted">登录更新版 · 2026-10-28</div>
     <p class="lead">登录后，手机和电脑会使用同一份投递记录。</p>
     <div class="stack">
-      <label>用户名<input id="cloudUsername" value="ZIYUE" autocomplete="username" autocapitalize="characters"></label>
+      <label>用户名<input id="cloudUsername" value="moon" autocomplete="username" autocapitalize="none" spellcheck="false"></label>
       <label>密码<input id="cloudPassword" type="password" autocomplete="current-password" required></label>
       <div class="cloud-error" id="cloudError" role="alert"></div>
       <button class="btn" id="cloudLoginBtn" type="submit">登录并同步</button>
@@ -169,7 +169,7 @@ details summary{cursor:pointer;color:var(--muted);font-size:13px}
   </form>
 </div>
 
-<script src="https://static.cloudbase.net/cloudbase-js-sdk/2.28.6/cloudbase.full.js"></script>
+<script src="https://static.cloudbase.net/cloudbase-js-sdk/3.10.4/cloudbase.full.js"></script>
 <script>
 (function(){
 "use strict";
@@ -201,12 +201,18 @@ function setSync(label,state=""){
   const a=$("#cloudAccount");if(a)a.textContent=cloudReady?"退出云端":"云端账户";
 }
 function cloudMessage(error){
-  const raw=String(error?.message||error?.error_description||error||"");
-  if(/password|credential|用户名|密码|账号/i.test(raw))return "用户名或密码不正确，请再试一次。";
-  if(/domain|cors|origin|域名/i.test(raw))return "当前网址还没有加入腾讯云安全域名。";
-  if(/network|fetch|timeout|网络/i.test(raw))return "暂时连不上腾讯云，请检查网络后重试。";
-  return raw||"连接失败，请稍后重试。";
+  const code=String(error?.code||error?.error||error?.errorCode||error?.error_code||"");
+  const raw=String(error?.message||error?.error_description||"连接失败，请稍后重试。");
+  let message=raw;
+  if(/invalid_username_or_password/i.test(code))message="腾讯云未接受此用户名和密码。请核对当前账号（新建账号为 moon）。";
+  else if(/captcha/i.test(code))message="腾讯云要求验证码，请暂停重复尝试。";
+  else if(/rate|too_many|invalid_status/i.test(code))message="登录尝试受限，请稍后再试。";
+  else if(/domain|cors|origin/i.test(code+raw))message="网站来源未获允许，请检查腾讯云安全来源配置。";
+  else if(/access.?key|api.?key/i.test(code+raw))message="腾讯云要求配置 Publishable Key，请联系维护者完成配置。";
+  const requestId=String(error?.requestId||error?.request_id||"");
+  return message+(code?" ["+code+"]":"")+(requestId?" 请求编号："+requestId:"");
 }
+
 function showCloudGate(message=""){
   $("#cloudError").textContent=message;
   $("#cloudGate").hidden=false;
@@ -250,7 +256,8 @@ async function saveCloud(){
     }
     if(result?.error)throw result.error;
     const row=await fetchCloudRow();
-    if(row){cloudUserId=row.user_id;lastCloudStamp=Date.parse(row.updated_at)||Date.now()}
+    if(!row)throw new Error("写入后未能读取云端数据，尚未确认同步成功。");
+    cloudUserId=row.user_id;lastCloudStamp=Date.parse(row.updated_at)||Date.now();
     try{localStorage.setItem(SYNC_KEY,String(lastCloudStamp))}catch(e){}
     setSync("已同步","ok");
   }catch(error){
@@ -266,7 +273,7 @@ async function pullCloud(announce=false,initial=false){
     if(!row){
       cloudBusy=false;
       await saveCloud();
-      if(announce)toast("本机数据已上传腾讯云");
+      if(announce&&$("#syncStatus").dataset.state==="ok")toast("本机数据已上传腾讯云");
       return;
     }
     cloudUserId=row.user_id;
@@ -297,8 +304,9 @@ async function initCloud(){
     app=cloudbase.init({env:CLOUD_ENV});
     auth=app.auth();
     rdb=app.rdb();
-    const state=await auth.getLoginState();
-    if(state)await connectCloud();
+    const {data,error}=await auth.getSession();
+    if(error)throw error;
+    if(data?.session)await connectCloud();
     else{setSync("未登录","");showCloudGate()}
   }catch(error){
     console.error("CloudBase init failed",error);
@@ -727,12 +735,14 @@ $("#cloudLogin").addEventListener("submit",async e=>{
   btn.disabled=true;btn.textContent="正在登录…";$("#cloudError").textContent="";
   try{
     if(!app){app=cloudbase.init({env:CLOUD_ENV});auth=app.auth();rdb=app.rdb()}
-    await auth.signIn({username,password});
+    const {data,error}=await auth.signInWithPassword({username,password});
+    if(error)throw error;
+    if(!data?.session)throw new Error("登录未返回有效会话，请稍后重试。");
     hideCloudGate();
     await connectCloud();
-    toast("登录成功，云端同步已开启");
+    toast($("#syncStatus").dataset.state==="ok"?"登录成功，数据已同步":"登录成功，但数据尚未同步。请点击同步状态重试。");
   }catch(error){
-    console.error("CloudBase sign in failed",error);
+    console.error("CloudBase sign in failed",cloudMessage(error));
     $("#cloudError").textContent=cloudMessage(error);
   }finally{btn.disabled=false;btn.textContent="登录并同步"}
 });
