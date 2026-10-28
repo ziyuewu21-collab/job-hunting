@@ -443,6 +443,8 @@ async function syncSeed(manual){
     let prof=false;
     if(!S.profile.text.trim()){try{const pr=await fetch("data/profile.json?t="+Date.now(),{cache:"no-store"});if(pr.ok){const pj=await pr.json();if(pj.text){const r=parseResume(pj.text);
       Object.assign(S.profile,{text:pj.text,name:r.name,edu:r.edu,exp:r.exp,skills:[...new Set([...S.profile.skills,...r.skills])]});if(pj.strengths&&!S.profile.strengths.length)S.profile.strengths=pj.strengths.slice();prof=true}}}catch(e){}}
+    (d.jds||[]).forEach(sd=>{if(!S.jds.some(x=>x.id===sd.id)){S.jds.push(Object.assign({id:sd.id,co:sd.co,role:sd.role,text:sd.text,created:sd.created||today()},analyzeJD(sd.text)));add++}
+      const job=sd.job&&S.jobs.find(x=>x.id===sd.job);if(job&&!job.jdId)job.jdId=sd.id});
     S.seedVersion=d.updated||"";save();
     if(manual)toast(add||upd||prof?`新增 ${add} 条，更新 ${upd} 条${prof?"，简历已载入":""}`:"已经是最新");
     render();
